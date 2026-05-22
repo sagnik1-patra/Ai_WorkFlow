@@ -1,0 +1,282 @@
+{
+  "name": "AI-Powered Multi-Tool Agent with Memory",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "d1bc8b86-285a-4a29-bde0-11e55df6ad00",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        120,
+        300
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.message?.text || $json.message?.caption || '' }}",
+        "options": {
+          "systemMessage": "# Role\nYou are Mia, an intelligent AI assistant that helps users via Telegram.\nYou are talking to {{ $json.message.from.first_name }} {{ $json.message.from.last_name }}.\n\n# Behavior\nYou should:\n- Understand the user's intent clearly.\n- Choose the correct tool from the available ones ONLY when needed.\n- Otherwise, answer directly.\n- Maintain short-term context using memory and respond naturally based on the current conversation.\n- Keep responses concise, useful, and Telegram-friendly.\n\n# Available Tools & When to Use Them:\n\n1. SerpAPI Web Search Tool\nUse this for:\n- Real-time web information\n- Current events/news\n- Latest facts\n- Weather, prices, updates, live information\n- Any factual query that may have changed recently\n\n2. Calculator Tool\nUse this for:\n- Math calculations\n- Percentages\n- Unit conversions\n- Currency-style calculations when values are provided\n- Time/date arithmetic\n- Any numerical reasoning\n\n3. Wikipedia Tool\nUse this for:\n- General knowledge\n- People, companies, places, concepts\n- Historical or background information\n- Definitions and encyclopedic explanations\n\n4. Google Calendar Tool\nUse this for:\n- Creating calendar events\n- Updating calendar events\n- Retrieving calendar event details\n- Scheduling meetings, reminders, tasks, or plans\n\n# Calendar Rules\nIf a calendar request is missing important details, ask a short follow-up question.\nRequired details may include:\n- Event title\n- Date\n- Start time\n- End time or duration\n- Description/location if relevant\n\n# Tool Usage Rules\n- Do not use tools unnecessarily.\n- Use only the tool that best matches the user's intent.\n- If a tool result is long, summarize it clearly.\n- If the user asks a simple conversational question, answer directly.\n- If the user asks for current or factual information, prefer SerpAPI.\n- If the user asks about a person/company/topic generally, prefer Wikipedia.\n- If the user asks for calculations, prefer Calculator.\n- If the user asks about scheduling, prefer Google Calendar.\n\n# Final Response\nAlways return the final answer as a clear Telegram message.\n"
+        }
+      },
+      "id": "188a6fa0-deec-4030-8e76-fa811252f7c1",
+      "name": "AI Agent Mia",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-1.5-flash",
+        "options": {
+          "temperature": 0.4
+        }
+      },
+      "id": "a964e9ce-a143-4da3-a818-02034ea91d17",
+      "name": "Google Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        220,
+        560
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YOUR_GEMINI_CREDENTIAL_ID",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "fromInput",
+        "sessionKey": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "contextWindowLength": 10
+      },
+      "id": "7da434e3-d581-40cf-b84f-1d562b49d8fc",
+      "name": "Simple Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        420,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "Use this tool for real-time web search, current information, latest news, factual queries, live updates, prices, and information that may have changed recently.",
+        "q": "={{ $fromAI('search_query', 'A concise Google search query for real-time web information') }}",
+        "additionalFields": {}
+      },
+      "id": "6b7d4b2e-bbdc-4fe5-8303-40cf6adc2bcd",
+      "name": "SerpAPI Web Search Tool",
+      "type": "@n8n/n8n-nodes-langchain.toolSerpApi",
+      "typeVersion": 1,
+      "position": [
+        620,
+        560
+      ],
+      "credentials": {
+        "serpApi": {
+          "id": "YOUR_SERPAPI_CREDENTIAL_ID",
+          "name": "SerpAPI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "toolDescription": "Use this tool for calculations, conversions, percentages, totals, formulas, and numerical reasoning."
+      },
+      "id": "17ce71ea-43e2-4baa-9866-7e16a51a24db",
+      "name": "Calculator Tool",
+      "type": "@n8n/n8n-nodes-langchain.toolCalculator",
+      "typeVersion": 1,
+      "position": [
+        820,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "Use this tool to search Wikipedia for people, companies, places, concepts, definitions, and general knowledge information.",
+        "query": "={{ $fromAI('wikipedia_query', 'A concise Wikipedia search query for the topic, person, company, or concept') }}"
+      },
+      "id": "fe3394bd-994a-48ae-acaa-eaee3c1cfff8",
+      "name": "Wikipedia Tool",
+      "type": "@n8n/n8n-nodes-langchain.toolWikipedia",
+      "typeVersion": 1,
+      "position": [
+        1020,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "primary",
+          "mode": "list",
+          "cachedResultName": "Primary"
+        },
+        "start": "={{ $fromAI('event_start', 'Start date and time for the calendar event in ISO format. Ask user if missing.') }}",
+        "end": "={{ $fromAI('event_end', 'End date and time for the calendar event in ISO format. Ask user if missing.') }}",
+        "additionalFields": {
+          "summary": "={{ $fromAI('event_title', 'Calendar event title') }}",
+          "description": "={{ $fromAI('event_description', 'Calendar event description or notes') }}",
+          "location": "={{ $fromAI('event_location', 'Calendar event location if provided, otherwise leave blank') }}"
+        }
+      },
+      "id": "7c50f56b-d398-499a-8a68-b737cc2341c9",
+      "name": "Google Calendar Tool",
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.1,
+      "position": [
+        1220,
+        560
+      ],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "YOUR_GOOGLE_CALENDAR_CREDENTIAL_ID",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.output || $json.text || $json.response }}",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "ed5d7aed-64f1-45d1-bf93-1e19390a6791",
+      "name": "Telegram Send Final Response",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        820,
+        300
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI Agent Mia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent Mia",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent Mia",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SerpAPI Web Search Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent Mia",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculator Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent Mia",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wikipedia Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent Mia",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Calendar Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent Mia",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent Mia": {
+      "main": [
+        [
+          {
+            "node": "Telegram Send Final Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "86110a64-81b3-44da-8347-1017bd8beae3",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "834f05f7-ca18-41df-9938-2ee18dab3b11",
+  "tags": []
+}
