@@ -1,0 +1,137 @@
+{
+  "name": "Automated Historical Content Publisher",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "triggerAtHour": 9,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      },
+      "id": "7c3a3f4d-3b51-4c95-9a7b-5a1a8a9b0d11",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        260,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "You are an \"On This Day in History\" social media assistant for LinkedIn. Your task is to perform the following steps based on today's date: {{ $now.toFormat('MMMM d') }}.\n\nFind a Fact: Find one interesting historical event that occurred on this date.\n\nWrite a LinkedIn Post: Write a professional and informative LinkedIn post about this event. The post should:\n- Start with a strong hook like \"On this day in [Year]...\"\n- Clearly explain the event and its broader impact.\n- End with a thought-provoking question to encourage discussion.\n- Use the hashtags #OnThisDay, #History, and #TodayInHistory.\n- Mention the present date in the post as part of the context.\n\nDirectly return only the LinkedIn post content. Do not add any introduction, notes, labels, or markdown fences.",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "Generate one accurate, engaging LinkedIn post about a historical event that happened on today's date."
+            }
+          ]
+        }
+      },
+      "id": "b91d2e43-8f28-4e2c-a552-f02f6c7f478a",
+      "name": "History Generator",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        560,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-1.5-flash",
+        "options": {
+          "temperature": 0.7
+        }
+      },
+      "id": "e61e4f1a-7a51-4e63-919d-d6ea6b0cc931",
+      "name": "Google Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        620,
+        540
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YOUR_GEMINI_CREDENTIAL_ID",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "post",
+        "operation": "create",
+        "text": "={{ $json.text }}",
+        "additionalFields": {}
+      },
+      "id": "58e1e3d2-3dbf-4e63-a31a-d145fbdf8a84",
+      "name": "Create a post",
+      "type": "n8n-nodes-base.linkedIn",
+      "typeVersion": 1,
+      "position": [
+        940,
+        300
+      ],
+      "credentials": {
+        "linkedInOAuth2Api": {
+          "id": "YOUR_LINKEDIN_CREDENTIAL_ID",
+          "name": "LinkedIn OAuth2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "History Generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "History Generator",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "History Generator": {
+      "main": [
+        [
+          {
+            "node": "Create a post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "f2407b4f-fda7-4f7e-a604-7101865e50e6",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "AutomatedHistoricalContentPublisher",
+  "tags": []
+}

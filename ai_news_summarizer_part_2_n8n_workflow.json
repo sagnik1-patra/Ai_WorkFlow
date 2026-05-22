@@ -1,0 +1,310 @@
+{
+  "name": "AI News Summarizer Part 2",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "triggerAtHour": 9,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      },
+      "id": "b7b78a87-8650-44d0-a62a-9a9a01bab584",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -760,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://www.normaltech.ai/feed"
+      },
+      "id": "bbcfd3a2-37f4-4cbb-be3a-c428137a8e56",
+      "name": "NormalTech RSS Feed",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.1,
+      "position": [
+        -520,
+        -20
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://aibusiness.com/rss.xml"
+      },
+      "id": "f9909730-bc54-453f-a738-fb0f365a0d18",
+      "name": "AI Business RSS Feed",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.1,
+      "position": [
+        -520,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://serpapi.com/search.json",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "engine",
+              "value": "google"
+            },
+            {
+              "name": "q",
+              "value": "latest AI events technology updates today"
+            },
+            {
+              "name": "tbm",
+              "value": "nws"
+            },
+            {
+              "name": "api_key",
+              "value": "YOUR_SERPAPI_API_KEY"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ffcefaab-4f57-4b2d-bb5a-607329be0e9a",
+      "name": "Fetch Live Events from SerpAPI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -520,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "append"
+      },
+      "id": "185a2545-c72c-4cef-ae88-806cc03024ee",
+      "name": "Data Merger",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        -260,
+        70
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "append"
+      },
+      "id": "72c046f4-1fcd-4daa-bc6b-7be337c155f6",
+      "name": "Data Merger 2",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        -40,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "allData",
+        "options": {}
+      },
+      "id": "4dd1cf3c-52f9-46c7-8e78-63cd52b681b6",
+      "name": "Data Aggregator",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        180,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-1.5-flash",
+        "options": {}
+      },
+      "id": "c2e9050d-1852-4703-b91a-5d281a726759",
+      "name": "Google Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        380,
+        340
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YOUR_GEMINI_CREDENTIAL_ID",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an AI newsletter assistant creating a daily intelligence report.\n\nAnalyze the following RSS feed articles and live event/search result data, then create a clean formatted newsletter.\n\nData:\n{{ JSON.stringify($json.allData) }}\n\nCreate the report in this structure:\n\nAI NEWS HIGHLIGHTS\n==================\n[5 most important AI developments]\n\nTECHNOLOGY UPDATES\n==================\n[Latest tech developments]\n\nLIVE EVENTS / SEARCH UPDATES\n============================\n[Important events, announcements, launches, conferences, or real-time updates found in the search data]\n\nKeep it concise, useful, and easy to read.",
+        "messages": {
+          "messageValues": []
+        }
+      },
+      "id": "2640580b-81a3-47f9-bc59-676316b905d1",
+      "name": "AI Summarization Model",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        460,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "YOUR_EMAIL@example.com",
+        "subject": "Daily AI News & Events Intelligence Report",
+        "message": "={{ $json.text }}",
+        "options": {}
+      },
+      "id": "4d669702-e2a8-4474-afe4-e7ec9b903e47",
+      "name": "Email Sender",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        740,
+        140
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_GMAIL_CREDENTIAL_ID",
+          "name": "Gmail OAuth2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "NormalTech RSS Feed",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "AI Business RSS Feed",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Live Events from SerpAPI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NormalTech RSS Feed": {
+      "main": [
+        [
+          {
+            "node": "Data Merger",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Business RSS Feed": {
+      "main": [
+        [
+          {
+            "node": "Data Merger",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Data Merger": {
+      "main": [
+        [
+          {
+            "node": "Data Merger 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Live Events from SerpAPI": {
+      "main": [
+        [
+          {
+            "node": "Data Merger 2",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Data Merger 2": {
+      "main": [
+        [
+          {
+            "node": "Data Aggregator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data Aggregator": {
+      "main": [
+        [
+          {
+            "node": "AI Summarization Model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Summarization Model",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Summarization Model": {
+      "main": [
+        [
+          {
+            "node": "Email Sender",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "ai-news-summarizer-part-2",
+  "tags": []
+}

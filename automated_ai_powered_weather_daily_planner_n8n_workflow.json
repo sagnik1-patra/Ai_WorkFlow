@@ -1,0 +1,181 @@
+{
+  "name": "Automated AI-Powered Weather-Based Daily Planner",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "triggerAtHour": 7,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      },
+      "id": "dca5322e-1344-48c4-ad57-1aa1a2326fdc",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        120,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.openweathermap.org/data/2.5/weather",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "YOUR_CITY_NAME"
+            },
+            {
+              "name": "appid",
+              "value": "YOUR_OPENWEATHERMAP_API_KEY"
+            },
+            {
+              "name": "units",
+              "value": "metric"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "0fcb79ca-fab7-4d35-afdd-17ada023dc84",
+      "name": "Fetch Weather Data",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        360,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-1.5-flash",
+        "options": {
+          "temperature": 0.7
+        }
+      },
+      "id": "5884c78b-5d1b-4c49-a0b8-f009d66e3f50",
+      "name": "Google Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        500,
+        520
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YOUR_GEMINI_CREDENTIAL_ID",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "You are an AI daily assistant creating a fun and personalized weather-based plan. Based on this weather data:\n\nTemperature: {{$json.main.temp}}°C\nWeather: {{$json.weather[0].description}}\nHumidity: {{$json.main.humidity}}%\n\nStart with a short, friendly greeting about today’s weather, for example: “Good morning! Here’s your weather-ready plan for today!”\n\nThen create a concise daily plan with these sections:\n\nOUTFIT SUGGESTION\nRecommend one outfit suitable for today’s weather.\n\nCOMMUTE OR TRAVEL TIP\nGive one practical suggestion based on current weather.\n\nHEALTH & COMFORT TIP\nMention hydration, sun protection, rain protection, warmth, or comfort advice as relevant.\n\nPRODUCTIVITY PLAN\nSuggest how to structure the day based on the weather and energy levels.\n\nQUICK REMINDER\nEnd with one short friendly reminder.\n\nKeep the tone warm, helpful, and concise.",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "Create a personalized daily weather-based planner email from the live weather data."
+            }
+          ]
+        }
+      },
+      "id": "fe8b0621-244b-408d-8b64-e30e72657564",
+      "name": "Summarize Weather",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.4,
+      "position": [
+        620,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "YOUR_EMAIL@example.com",
+        "subject": "Your AI Weather-Based Daily Planner",
+        "message": "={{ $json.text }}",
+        "options": {}
+      },
+      "id": "9cf7d3fb-717a-46e1-9cbf-fd3e6efd61ef",
+      "name": "Send a message",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        900,
+        300
+      ],
+      "webhookId": "671e87a8-13ed-4109-85bc-5ff986b00e86",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_GMAIL_CREDENTIAL_ID",
+          "name": "Gmail OAuth2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Fetch Weather Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Weather Data": {
+      "main": [
+        [
+          {
+            "node": "Summarize Weather",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Summarize Weather",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarize Weather": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "56fc2f63-014e-46a3-9ddf-0b9a84d64112",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "replace-with-your-n8n-instance-id"
+  },
+  "id": "automated-ai-powered-weather-daily-planner",
+  "tags": []
+}
