@@ -1,0 +1,301 @@
+{
+  "name": "Automated Social Media Content Generation",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet1",
+          "mode": "name"
+        },
+        "event": "rowAdded",
+        "options": {}
+      },
+      "id": "8d0c6c9d-0cd4-4e5e-a4c0-6a16b592f1d2",
+      "name": "Google Sheets Trigger",
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        -760,
+        80
+      ],
+      "credentials": {
+        "googleSheetsTriggerOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Summarize this article: {{ $json.newslink }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are a precise news article summarizer. Summarize the article link provided by the user in clear, factual language. Focus on the main idea, key points, and industry relevance."
+            }
+          ]
+        }
+      },
+      "id": "c98a8193-7d71-47be-99e6-b73195d7057d",
+      "name": "Summarize News Article",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        -500,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-1.5-flash",
+        "options": {}
+      },
+      "id": "1e534796-1e93-4e67-b3df-1e8f00da249f",
+      "name": "Gemini - Article Summarizer",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -500,
+        300
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YOUR_GEMINI_CREDENTIAL_ID",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Assume the role of an industry expert and draft a LinkedIn post discussing key points from a news article relevant to artificial intelligence. The post should provide insightful analysis, connect with current industry trends, and encourage professional engagement or discussions. Highlight any notable implications for the industry. LinkedIn supports detailed posts, so ensure it is informative and structured. Add a professional call to action. Directly start with the post content, do not add any primer like \"here is your content for LinkedIn post\". Here's a summary of the article: {{ $json.text }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are a professional LinkedIn content strategist for the artificial intelligence industry. Write structured, thoughtful, discussion-driven LinkedIn posts."
+            }
+          ]
+        }
+      },
+      "id": "4f49a9fd-9104-4fe1-876d-84698dbe33e8",
+      "name": "Generate LinkedIn Post Content",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        -160,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-1.5-flash",
+        "options": {}
+      },
+      "id": "43b530fd-d3ab-4622-a3fc-5065c41b52ee",
+      "name": "Gemini - LinkedIn Content",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -160,
+        120
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YOUR_GEMINI_CREDENTIAL_ID",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "text": "={{ $json.text }}"
+      },
+      "id": "f46d0067-67af-49ad-9351-70b5f85659fb",
+      "name": "Post to LinkedIn",
+      "type": "n8n-nodes-base.linkedIn",
+      "typeVersion": 1,
+      "position": [
+        220,
+        -80
+      ],
+      "credentials": {
+        "linkedInOAuth2Api": {
+          "id": "YOUR_LINKEDIN_CREDENTIAL_ID",
+          "name": "LinkedIn account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Draft an X post as an AI industry expert analyzing a key news article. The post should:Deliver sharp insights on the article's main points.Connect to current AI trends.Spark discussion with a thought-provoking question.Keep it punchy and engaging.End with a clear CTA.Length should be within 30 words. Focus on what matters most to the AI community. Make every word count.Article summary: {{ $json.text }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are an expert X/Twitter copywriter for the AI industry. Keep the post concise, sharp, and within 30 words."
+            }
+          ]
+        }
+      },
+      "id": "bc35a8a4-7329-42ff-bfb3-08aa4585ac84",
+      "name": "Generate X/Twitter Post Content",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        -160,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-1.5-flash",
+        "options": {}
+      },
+      "id": "74be47f8-00ea-44f6-9b73-5b0545cc09f8",
+      "name": "Gemini - X/Twitter Content",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -160,
+        520
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YOUR_GEMINI_CREDENTIAL_ID",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "tweet",
+        "operation": "create",
+        "text": "={{ $json.text }}"
+      },
+      "id": "e4f28c43-5349-43eb-85e2-a0f22b4291bd",
+      "name": "Post to X/Twitter",
+      "type": "n8n-nodes-base.twitter",
+      "typeVersion": 2,
+      "position": [
+        220,
+        320
+      ],
+      "credentials": {
+        "twitterOAuth2Api": {
+          "id": "YOUR_TWITTER_CREDENTIAL_ID",
+          "name": "X/Twitter account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Sheets Trigger": {
+      "main": [
+        [
+          {
+            "node": "Summarize News Article",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini - Article Summarizer": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Summarize News Article",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarize News Article": {
+      "main": [
+        [
+          {
+            "node": "Generate LinkedIn Post Content",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Generate X/Twitter Post Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini - LinkedIn Content": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generate LinkedIn Post Content",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate LinkedIn Post Content": {
+      "main": [
+        [
+          {
+            "node": "Post to LinkedIn",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini - X/Twitter Content": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generate X/Twitter Post Content",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate X/Twitter Post Content": {
+      "main": [
+        [
+          {
+            "node": "Post to X/Twitter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "b92f1af5-4443-49b5-bb2d-31ac5889cc26",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "automated-social-media-content-generation",
+  "tags": []
+}

@@ -1,0 +1,301 @@
+{
+  "name": "AI Workflow: Learning Journey Showcase",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet1",
+          "mode": "name"
+        },
+        "event": "rowAdded",
+        "options": {}
+      },
+      "id": "8d0c6c9d-0cd4-4e5e-a4c0-6a16b592f1d2",
+      "name": "Google Sheets Trigger",
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        -760,
+        80
+      ],
+      "credentials": {
+        "googleSheetsTriggerOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyze this learning progress entry and create a professional summary:Date: {{ $json.Date }}Topic: {{ $json['Topic/Module'] }}What I Learned: {{ $json['What I Learned'] }}Skills/Tools Used: {{ $json['Skills/Tools'] }}Create a concise, impactful summary that:1. Highlights the main concept mastered2. Emphasizes practical skills gained3. Shows progression in the learning journey",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are a professional learning journey summarizer. Create concise, impactful summaries from learning progress entries."
+            }
+          ]
+        }
+      },
+      "id": "c98a8193-7d71-47be-99e6-b73195d7057d",
+      "name": "Generate Summary",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        -500,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-1.5-flash",
+        "options": {}
+      },
+      "id": "1e534796-1e93-4e67-b3df-1e8f00da249f",
+      "name": "Google Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -500,
+        300
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YOUR_GEMINI_CREDENTIAL_ID",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Transform this learning summary into an engaging LinkedIn post: {{ $json.text }}Create a post that:- Starts with a hook about today's learning achievement- Shares 2-3 specific insights or skills gained- Includes a reflection on how this knowledge applies to real-world scenarios- Uses relevant hashtags: #AIBootcamp #LearningJourney #GenerativeAI #TechSkills #100DaysOfCode- Ends with a question to engage the community- Length: 200-300 words- Professional yet authentic tone- Include relevant emojis for visual appeal",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are a LinkedIn content strategist who writes professional, authentic learning journey posts with strong hooks, practical insights, and community engagement."
+            }
+          ]
+        }
+      },
+      "id": "4f49a9fd-9104-4fe1-876d-84698dbe33e8",
+      "name": "Generate LinkedIn Post",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        -160,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-1.5-flash",
+        "options": {}
+      },
+      "id": "43b530fd-d3ab-4622-a3fc-5065c41b52ee",
+      "name": "Google Gemini Chat Model1",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -160,
+        120
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YOUR_GEMINI_CREDENTIAL_ID",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "text": "={{ $json.text }}"
+      },
+      "id": "f46d0067-67af-49ad-9351-70b5f85659fb",
+      "name": "Post to LinkedIn",
+      "type": "n8n-nodes-base.linkedIn",
+      "typeVersion": 1,
+      "position": [
+        220,
+        -80
+      ],
+      "credentials": {
+        "linkedInOAuth2Api": {
+          "id": "YOUR_LINKEDIN_CREDENTIAL_ID",
+          "name": "LinkedIn account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Create a punchy X/Twitter post about this learning: {{ $json.text }}Requirements:- Celebrate the learning milestone enthusiastically- Mention 1 specific skill or tool learned- Keep under 280 characters- Include 2-3 hashtags: #AI #Learning #TechJourney- Add relevant emojiExample format: \"Day X: [achievement]! Learned [specific skill/tool]. [Key insight]. [Question/CTA]? #hashtags\"",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are an X/Twitter copywriter who writes short, enthusiastic learning milestone posts under 280 characters."
+            }
+          ]
+        }
+      },
+      "id": "bc35a8a4-7329-42ff-bfb3-08aa4585ac84",
+      "name": "Generate X/Twitter Post",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        -160,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-1.5-flash",
+        "options": {}
+      },
+      "id": "74be47f8-00ea-44f6-9b73-5b0545cc09f8",
+      "name": "Google Gemini Chat Model2",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -160,
+        520
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YOUR_GEMINI_CREDENTIAL_ID",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "tweet",
+        "operation": "create",
+        "text": "={{ $json.text }}"
+      },
+      "id": "e4f28c43-5349-43eb-85e2-a0f22b4291bd",
+      "name": "Post to X/Twitter",
+      "type": "n8n-nodes-base.twitter",
+      "typeVersion": 2,
+      "position": [
+        220,
+        320
+      ],
+      "credentials": {
+        "twitterOAuth2Api": {
+          "id": "YOUR_TWITTER_CREDENTIAL_ID",
+          "name": "X/Twitter account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Sheets Trigger": {
+      "main": [
+        [
+          {
+            "node": "Generate Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generate Summary",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Summary": {
+      "main": [
+        [
+          {
+            "node": "Generate LinkedIn Post",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Generate X/Twitter Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generate LinkedIn Post",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate LinkedIn Post": {
+      "main": [
+        [
+          {
+            "node": "Post to LinkedIn",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generate X/Twitter Post",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate X/Twitter Post": {
+      "main": [
+        [
+          {
+            "node": "Post to X/Twitter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "672649d0-dd37-4eb8-8cd8-8a02ba3bd8ac",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "learning-journey-showcase-workflow",
+  "tags": []
+}

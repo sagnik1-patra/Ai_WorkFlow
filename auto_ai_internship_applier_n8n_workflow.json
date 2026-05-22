@@ -1,0 +1,170 @@
+{
+  "name": "Auto AI Internship Applier with n8n",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "My Job Applications",
+          "mode": "name"
+        },
+        "event": "rowAdded",
+        "options": {}
+      },
+      "id": "f4e9a8e1-3c8b-4d61-9e9c-2fdfd8ccf001",
+      "name": "Google Sheets Trigger",
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        260,
+        300
+      ],
+      "credentials": {
+        "googleSheetsTriggerOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "You are a B.Tech student applying for a software development internship. Given your name, the internship role you're applying for, and optionally your Details, experience, and skills \u2014 write a short, polite, confident and ready-to-send email introducing yourself and expressing interest in the internship opportunity. Keep the tone enthusiastic but formal. Mention that you're eager to learn and contribute, and that you're looking forward to hearing back. End the email with a thank you and your name. Use \"Dear Hiring Manager\" as the greeting. Do not include any placeholder text, brackets, or variables that need to be filled in. The email should be complete and ready to send as-is.\n\nReturn only valid JSON matching the schema.\n\nHere is your information:\nName: {{ $json['Full Name'] }}\nto: {{ $json.HiringManagerEmail }}\nInternship Role: {{ $json['Position Applied'] }}\nCompany Name: {{ $json.CompanyName }}\nDetails: {{ $json.Details }}\nExperience: {{ $json['Experience (Years)'] }}\nSkills: {{ $json.Skills }}\nJob Post URL: {{ $json.JobPostURL }}",
+        "hasOutputParser": true
+      },
+      "id": "a670206f-14d4-42ab-a3d7-8b9ac4002f26",
+      "name": "Basic LLM Chain",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.4,
+      "position": [
+        560,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-1.5-flash",
+        "options": {
+          "temperature": 0.4
+        }
+      },
+      "id": "96eb1ff0-ded2-4385-9e49-2545de5d2b44",
+      "name": "Google Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        520,
+        560
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YOUR_GEMINI_CREDENTIAL_ID",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"to\": \"hr@examplecompany.com\",\n  \"subject\": \"Application for Software Development Internship\",\n  \"body\": \"Dear Hiring Manager,\\n\\nI hope this message finds you well. My name is John Doe, and I am currently pursuing my B.Tech. I am writing to express my interest in the Software Development Internship position.\\n\\nThank you for considering my application.\\n\\nBest regards,\\nJohn Doe\"\n}"
+      },
+      "id": "e1d19cb8-9de6-4b43-bf5a-23d92e7d6f47",
+      "name": "Structured Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        720,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.output.to }}",
+        "subject": "={{ $json.output.subject }}",
+        "message": "={{ $json.output.body }}",
+        "options": {}
+      },
+      "id": "f0cb1b4d-23c3-4de8-9d87-4b1f3bb41fd3",
+      "name": "Send a message",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        900,
+        300
+      ],
+      "webhookId": "auto-ai-internship-applier-gmail",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_GMAIL_CREDENTIAL_ID",
+          "name": "Gmail OAuth2"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Google Sheets Trigger": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2026-05-21T12:19:35.019292Z",
+  "versionId": "d9f3a771-ceeb-4508-9eb5-f39f17029460"
+}

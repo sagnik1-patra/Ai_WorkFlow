@@ -1,0 +1,236 @@
+{
+  "name": "AI News Summarizer",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "triggerAtHour": 9,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      },
+      "id": "b929f94f-fa12-4d0b-a9a5-412dfc8f9ca4",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        120,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://www.normaltech.ai/feed"
+      },
+      "id": "a85918a2-a22e-4cee-a64e-01e9a47129c8",
+      "name": "NormalTech",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [
+        360,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://aibusiness.com/rss.xml"
+      },
+      "id": "b4b66407-7f6f-460c-a978-fe228d609688",
+      "name": "AIBusiness",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [
+        360,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "append"
+      },
+      "id": "22dfc835-36f3-4d5b-88d7-d1deacfd857c",
+      "name": "Data Merger",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        620,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "articles",
+        "options": {}
+      },
+      "id": "839eb34b-7b85-431e-9754-bcbaaa70adcd",
+      "name": "Data Aggregator",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        860,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-1.5-flash",
+        "options": {}
+      },
+      "id": "28322585-e3b0-499e-bd79-a8018a3e8d49",
+      "name": "Google Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1100,
+        480
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YOUR_GEMINI_CREDENTIAL_ID",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "You are an AI news summarizer handling multiple categories.\n\nUse the following aggregated RSS feed items as source data:\n{{ JSON.stringify($json.articles) }}\n\nCreate a clean, formatted daily newsletter.\n\nOrganize by category:\n\nAI NEWS\n=======\n[Top 3 AI news items]\n\nTECHNOLOGY UPDATES\n==================\n[Top 3 technology items]\n\nFor each item, include:\n- Headline\n- 2-3 sentence summary\n- Why it matters\n- Source/link if available\n\nKeep the report professional, concise, and easy to read.",
+        "messages": {
+          "messageValues": []
+        }
+      },
+      "id": "3fcc6fe6-9d96-451b-861b-83402171169f",
+      "name": "AI Summarization Model",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        1120,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "YOUR_EMAIL@example.com",
+        "subject": "Daily AI News Summary",
+        "message": "={{ $json.text }}",
+        "options": {}
+      },
+      "id": "e332e744-a93d-4956-bc15-7018d224feac",
+      "name": "Email Sender",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1400,
+        300
+      ],
+      "webhookId": "34a4bd98-6b36-4c39-83d0-8b21175a5261",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_GMAIL_CREDENTIAL_ID",
+          "name": "Gmail OAuth2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "NormalTech",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "AIBusiness",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NormalTech": {
+      "main": [
+        [
+          {
+            "node": "Data Merger",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AIBusiness": {
+      "main": [
+        [
+          {
+            "node": "Data Merger",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Data Merger": {
+      "main": [
+        [
+          {
+            "node": "Data Aggregator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data Aggregator": {
+      "main": [
+        [
+          {
+            "node": "AI Summarization Model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Summarization Model",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Summarization Model": {
+      "main": [
+        [
+          {
+            "node": "Email Sender",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "c7d181a8-3928-40be-a391-5630d36ca78b",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "REPLACE_WITH_YOUR_N8N_INSTANCE_ID"
+  },
+  "id": "ai-news-summarizer-workflow",
+  "tags": []
+}
