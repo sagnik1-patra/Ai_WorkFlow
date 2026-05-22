@@ -1,0 +1,154 @@
+{
+  "name": "Learning Path Generator MCP Fixed",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "3131c999-e701-4304-8699-0b279abacab4",
+      "name": "Chat Trigger",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        120,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.chatInput }}",
+        "options": {
+          "systemMessage": "You are a day-wise learning path generator. When given a learning goal, create a curriculum with Google Docs and Calendar events.\n\nSTEP 1: PLAN THE CURRICULUM\nPlan the topics based on the number of days requested. Structure from beginner to advanced. If the user does not specify a duration, create a practical 7-day plan.\n\nFor every day include:\n- Day number\n- Date\n- Topic/module\n- Learning objective\n- Concepts to study\n- Hands-on practice task\n- Resource links such as articles, videos, documentation, or practice resources\n- Expected outcome\n\nSTEP 2: DETERMINE START DATE\nIf user says \"starting tomorrow\" \u2192 use tomorrow's date.\nIf user says \"starting next Monday\" \u2192 calculate next Monday.\nIf user says \"starting from [date]\" \u2192 use that date.\nIf NO date mentioned \u2192 use TODAY's date.\nToday is {{$now.format('YYYY-MM-DD')}}.\n\nSTEP 3: RESEARCH RESOURCES\nUse the MCP Client Tool to search the web through SerpAPI for useful resources for every topic.\nPrefer official documentation, high-quality tutorials, videos, and practice resources.\n\nSTEP 4: CREATE GOOGLE DOC\nUse the MCP Client Tool to create a Google Doc.\nSave the complete day-wise curriculum in a clean format.\nThe document must include:\n- Learning goal\n- Duration\n- Start date\n- Day-wise curriculum\n- Resource links\n- Practice tasks\n\nSTEP 5: CREATE GOOGLE CALENDAR EVENTS\nUse the MCP Client Tool to create one Google Calendar event for each day.\nEach event must include:\n- Event title\n- Date and time\n- Day topic\n- Objective\n- Practice task\n- Resource links\n\nSTEP 6: RESPOND TO USER\nReturn a concise confirmation message including:\n- Confirmation that the day-wise curriculum was created\n- Confirmation that calendar events were scheduled\n- Google Doc link\n"
+        }
+      },
+      "id": "c7623601-b033-4a55-9295-3e2dfaf6fb44",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "mistral-large-latest",
+        "options": {
+          "temperature": 0.5
+        }
+      },
+      "id": "346a6481-a168-4d2c-a682-aa2875070742",
+      "name": "Mistral Cloud Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
+      "typeVersion": 1,
+      "position": [
+        220,
+        560
+      ],
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "YOUR_MISTRAL_CREDENTIAL_ID",
+          "name": "Mistral Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "fromInput",
+        "sessionKey": "={{ $json.sessionId || $json.chatId || 'learning-path-mcp-session' }}",
+        "contextWindowLength": 10
+      },
+      "id": "9bccb7fe-d162-4b7a-95fb-37a4e08ec2d4",
+      "name": "Simple Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        420,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "MCP Client Tool connected to Google Docs, Google Calendar, and SerpAPI. Use this tool to search learning resources, create a Google Doc, update the Google Doc with the full curriculum, create one Google Calendar event for each learning day, and return the Google Doc link. Available MCP capabilities: search_web, create_google_doc, update_google_doc, create_calendar_event, get_calendar_events.",
+        "serverUrl": "YOUR_MCP_SERVER_URL",
+        "authentication": "bearerAuth",
+        "headers": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_MCP_AUTH_TOKEN"
+            }
+          ]
+        },
+        "availableTools": "search_web,create_google_doc,update_google_doc,create_calendar_event,get_calendar_events",
+        "options": {}
+      },
+      "id": "461ed964-e8b1-4372-982b-40b2b5236912",
+      "name": "MCP Client Tool",
+      "type": "n8n-nodes-base.mcpClientTool",
+      "typeVersion": 1,
+      "position": [
+        660,
+        560
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Chat Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mistral Cloud Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MCP Client Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "4dedfee3-6c41-445a-bdc5-70fd07fedd0e",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "7adf743c-a909-41c8-8694-e2ea75723a0e",
+  "tags": []
+}

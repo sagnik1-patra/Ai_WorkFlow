@@ -1,0 +1,285 @@
+{
+  "name": "AI-Powered Multi-Tool Agent MCP",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "8ea3d9ce-73ef-48c1-acc3-06a70611b055",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        100,
+        300
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.message?.text || $json.message?.caption || '' }}",
+        "options": {
+          "systemMessage": "# Role\nYou are Mia, an intelligent AI assistant that helps users via Telegram.\nYou are talking to {{ $json.message.from.first_name }} {{ $json.message.from.last_name }}.\n\n# Behavior\nYou should:\n- Understand the user's intent clearly.\n- Choose the correct tool from the available ones ONLY when needed.\n- Otherwise, answer directly using Google Gemini.\n- Use short-term memory to keep the conversation coherent.\n- Keep responses concise, accurate, and Telegram-friendly.\n\n# Available Tools & When to Use Them:\n\n1. MCP Client Tool - SerpAPI\nUse this for:\n- Real-time web search\n- Current facts, latest news, trends, prices, events, and live information\n- Any question where information may have changed recently\n\n2. Calculator Tool\nUse this for:\n- Arithmetic calculations\n- Percentages\n- Unit conversions\n- Totals, formulas, and numerical reasoning\n\n3. Wikipedia Tool\nUse this for:\n- People, companies, places, concepts, and general knowledge\n- Background information and encyclopedic explanations\n\n4. MCP Client Tool - Google Calendar\nUse this for:\n- Creating calendar events\n- Deleting calendar events\n- Updating or modifying calendar events\n- Retrieving scheduled events\n- Managing meetings, reminders, and plans\n\n# Calendar Rules\nIf the user asks to create, update, delete, or retrieve a calendar event and key details are missing, ask a short follow-up question.\nImportant calendar details include:\n- Event title\n- Date\n- Start time\n- End time or duration\n- Description or location if relevant\n\n# Tool Usage Rules\n- Use tools only when needed.\n- Select the most relevant tool for the user's intent.\n- For current information, prefer SerpAPI via MCP.\n- For math, use Calculator.\n- For people/company/topic lookup, use Wikipedia.\n- For calendar actions, use Google Calendar via MCP.\n- Summarize tool results clearly instead of returning raw data.\n\n# Final Response\nAlways send a clear final answer suitable for Telegram.\n"
+        }
+      },
+      "id": "c0380e08-c2f6-4f73-a83e-d1b3fa411509",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-1.5-flash",
+        "model": "models/gemini-1.5-flash",
+        "options": {
+          "temperature": 0.4
+        }
+      },
+      "id": "abc41d23-e55f-4dfb-9031-f31679293d87",
+      "name": "Google Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        200,
+        560
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YOUR_GEMINI_CREDENTIAL_ID",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "fromInput",
+        "sessionKey": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "contextWindowLength": 10
+      },
+      "id": "333de7f0-8d27-4275-867c-40c8250d1038",
+      "name": "Simple Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        420,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "MCP Client Tool for SerpAPI. Use it to fetch real-time web information, factual queries, news, trends, current data, and live updates.",
+        "serverUrl": "YOUR_MCP_SERVER_URL",
+        "authentication": "bearerAuth",
+        "headers": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_MCP_AUTH_TOKEN"
+            }
+          ]
+        },
+        "availableTools": "search_web,serpapi_search,web_search",
+        "toolName": "serpapi_search",
+        "options": {}
+      },
+      "id": "64b7e624-0022-4063-b595-9f0846549974",
+      "name": "SerpAPI MCP Client Tool",
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "typeVersion": 1,
+      "position": [
+        640,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "Use this tool for calculations, conversions, percentages, totals, formulas, and numerical reasoning."
+      },
+      "id": "bc71a3dd-b4ab-46ca-b195-5bfd88593c36",
+      "name": "Calculator Tool",
+      "type": "@n8n/n8n-nodes-langchain.toolCalculator",
+      "typeVersion": 1,
+      "position": [
+        860,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "Use this tool to search Wikipedia for information about people, companies, places, concepts, definitions, and general knowledge.",
+        "query": "={{ $fromAI('wikipedia_query', 'A concise Wikipedia search query for the topic, person, company, or concept') }}"
+      },
+      "id": "56152730-8cc3-4d21-be74-f8a083d30676",
+      "name": "Wikipedia Tool",
+      "type": "@n8n/n8n-nodes-langchain.toolWikipedia",
+      "typeVersion": 1,
+      "position": [
+        1080,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "MCP Client Tool for Google Calendar. Use it to create, delete, update, modify, and retrieve calendar events, meetings, reminders, and schedules.",
+        "serverUrl": "YOUR_MCP_SERVER_URL",
+        "authentication": "bearerAuth",
+        "headers": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_MCP_AUTH_TOKEN"
+            }
+          ]
+        },
+        "availableTools": "create_calendar_event,delete_calendar_event,update_calendar_event,get_calendar_events,modify_calendar_event",
+        "toolName": "google_calendar",
+        "options": {}
+      },
+      "id": "bb774245-31ab-4ea1-823f-28a44e8edc32",
+      "name": "Google Calendar MCP Client Tool",
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "typeVersion": 1,
+      "position": [
+        1300,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.output || $json.text || $json.response }}",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "54cf5dd2-6cf8-4ccd-aa83-22e05c1d7864",
+      "name": "Telegram Send a Text Message",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        780,
+        300
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SerpAPI MCP Client Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculator Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wikipedia Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Calendar MCP Client Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Telegram Send a Text Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "6cef307b-9624-49e7-b6f3-e6f8f29b88e6",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "ca365f10-45e6-4190-a80f-29b849e50f63",
+  "tags": []
+}

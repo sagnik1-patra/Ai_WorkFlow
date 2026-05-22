@@ -1,0 +1,204 @@
+{
+  "name": "Learning Path Generator MCP",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "1bfdec4a-54d9-474c-84ce-26cbaf7b04ba",
+      "name": "Chat Trigger",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.chatInput }}",
+        "options": {
+          "systemMessage": "You are a day-wise learning path generator. When given a learning goal, create a curriculum with Google Docs and Calendar events.\n\nSTEP 1: PLAN THE CURRICULUM\nPlan the topics based on the number of days requested. Structure from beginner to advanced. If the user does not specify a duration, create a practical 7-day plan.\n\nFor every day include:\n- Day number\n- Date\n- Topic/module\n- Learning objective\n- Concepts to study\n- Hands-on practice task\n- Resource links such as articles, videos, documentation, or practice resources\n- Expected outcome\n\nSTEP 2: DETERMINE START DATE\nIf user says \"starting tomorrow\" \u2192 use tomorrow's date.\nIf user says \"starting next Monday\" \u2192 calculate next Monday.\nIf user says \"starting from [date]\" \u2192 use that date.\nIf NO date mentioned \u2192 use TODAY's date.\nToday is {{$now.format('YYYY-MM-DD')}}.\n\nSTEP 3: RESEARCH RESOURCES\nUse the SerpAPI MCP Client Tool to search for useful resource links.\nPrefer official documentation, beginner-friendly tutorials, videos, and practical exercises.\n\nSTEP 4: CREATE GOOGLE DOC\nUse the Google Docs MCP Client Tool to create a Google Doc and update it with the complete curriculum in a clean day-wise format.\n\nSTEP 5: CREATE GOOGLE CALENDAR EVENTS\nUse the Google Calendar MCP Client Tool to create one Google Calendar event for each day of the learning plan. Each event should include the topic, objective, task, and useful resource links.\n\nSTEP 6: RESPOND TO USER\nReturn a concise confirmation message that includes:\n- Confirmation that the learning path was created\n- Confirmation that calendar events were scheduled\n- The Google Doc link\n"
+        }
+      },
+      "id": "a65af7e6-9e36-43c1-a96a-89abbdb7bcc4",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        420,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "model": "mistral-large-latest",
+        "modelName": "mistral-large-latest",
+        "options": {
+          "temperature": 0.5
+        }
+      },
+      "id": "9b5de4c8-c500-48b4-b8fb-2393592d6f26",
+      "name": "Mistral Cloud Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
+      "typeVersion": 1,
+      "position": [
+        180,
+        560
+      ],
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "YOUR_MISTRAL_CREDENTIAL_ID",
+          "name": "Mistral Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "toolDescription": "Use this MCP Client Tool for SerpAPI web search. Search for learning resources, articles, videos, official documentation, and practice resources.",
+        "serverUrl": "YOUR_MCP_SERVER_URL",
+        "authentication": "bearerAuth",
+        "headers": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_MCP_AUTH_TOKEN"
+            }
+          ]
+        },
+        "availableTools": "search_web",
+        "toolName": "serpapi_search",
+        "options": {}
+      },
+      "id": "38409311-dbfd-44b5-afa1-b2194e05bb94",
+      "name": "SerpAPI MCP Client Tool",
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "typeVersion": 1,
+      "position": [
+        420,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "Use this MCP Client Tool for Google Docs. Create a Google Doc and update it with the complete day-wise curriculum. Return the Google Doc link.",
+        "serverUrl": "YOUR_MCP_SERVER_URL",
+        "authentication": "bearerAuth",
+        "headers": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_MCP_AUTH_TOKEN"
+            }
+          ]
+        },
+        "availableTools": "create_google_doc,update_google_doc",
+        "toolName": "google_docs",
+        "options": {}
+      },
+      "id": "270389da-9c4f-48e1-9259-6c59f0ef245d",
+      "name": "Google Docs MCP Client Tool",
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "typeVersion": 1,
+      "position": [
+        660,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "Use this MCP Client Tool for Google Calendar. Create individual Google Calendar events for each day of the learning plan and retrieve calendar events if needed.",
+        "serverUrl": "YOUR_MCP_SERVER_URL",
+        "authentication": "bearerAuth",
+        "headers": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_MCP_AUTH_TOKEN"
+            }
+          ]
+        },
+        "availableTools": "create_calendar_event,get_calendar_events",
+        "toolName": "google_calendar",
+        "options": {}
+      },
+      "id": "6e1941a6-977a-46a0-abf7-baa7e74067e9",
+      "name": "Google Calendar MCP Client Tool",
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "typeVersion": 1,
+      "position": [
+        900,
+        560
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Chat Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mistral Cloud Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SerpAPI MCP Client Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Docs MCP Client Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Calendar MCP Client Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "256d0798-5eeb-432c-a029-e1a6fbd4487a",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "97bb64cc-c33e-4b1b-bd21-d00f32afa7fa",
+  "tags": []
+}
