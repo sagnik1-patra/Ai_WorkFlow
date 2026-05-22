@@ -1,0 +1,192 @@
+{
+  "name": "AI Image Generator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ai-image-generator",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "004a9ce8-434c-49bb-8fef-f2200c7c25d4",
+      "name": "Receive Prompt",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        120,
+        300
+      ],
+      "webhookId": "a83f6595-0060-4089-a5b4-96fb8c9bb1aa"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.freepik.com/v1/ai/text-to-image/google/imagen-3",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "x-freepik-api-key",
+              "value": "YOUR_FREEPIK_API_KEY"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParametersJson": "={{ JSON.stringify({ prompt: $json.body?.text || $json.text || $json.prompt || $json.chatInput }) }}",
+        "options": {}
+      },
+      "id": "7bd0dcb2-0dc1-4298-8596-e9e2fe8c638d",
+      "name": "Send Text Prompt to Freepik API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        360,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 30,
+        "unit": "seconds"
+      },
+      "id": "877a30ee-dd0f-48e0-a887-eeba887b116b",
+      "name": "Wait for Image",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        580,
+        300
+      ],
+      "webhookId": "485c777b-611d-42e8-b664-4113eb9ce07e"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.freepik.com/v1/ai/text-to-image/google/imagen-3/{{ $('Send Text Prompt to Freepik API').item.json.data?.task_id || $('Send Text Prompt to Freepik API').item.json.task_id || $('Send Text Prompt to Freepik API').item.json.id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-freepik-api-key",
+              "value": "YOUR_FREEPIK_API_KEY"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "8c537a90-4a73-4ccd-80df-27071564b8c7",
+      "name": "Check Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        790,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.data?.image_url || $json.data?.images?.[0]?.url || $json.image_url || $json.url || $json.output?.[0] }}",
+        "responseFormat": "file",
+        "options": {}
+      },
+      "id": "1c1099eb-4494-4b76-9555-1f259520f493",
+      "name": "Retrieve Generated Image",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1010,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "binary",
+        "options": {
+          "responseCode": 200
+        },
+        "binaryPropertyName": "data"
+      },
+      "id": "4ebff77c-90aa-4b12-b02e-7ebb647cfe7e",
+      "name": "Return Image",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1230,
+        300
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Receive Prompt": {
+      "main": [
+        [
+          {
+            "node": "Send Text Prompt to Freepik API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Text Prompt to Freepik API": {
+      "main": [
+        [
+          {
+            "node": "Wait for Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for Image": {
+      "main": [
+        [
+          {
+            "node": "Check Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Status": {
+      "main": [
+        [
+          {
+            "node": "Retrieve Generated Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retrieve Generated Image": {
+      "main": [
+        [
+          {
+            "node": "Return Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "a336d30b-b2c0-4568-b7b7-4904a4b4cd4e",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "7f99c761-f465-497d-b0cd-84dc8a83b9a8",
+  "tags": []
+}

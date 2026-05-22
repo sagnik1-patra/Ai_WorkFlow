@@ -1,0 +1,220 @@
+{
+  "name": "AI-Powered LinkedIn Post Generator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ai-powered-linkedin-post-generator",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "8260b981-7b32-4e16-9a05-d6247cf302a6",
+      "name": "Article URL Receiver",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        120,
+        300
+      ],
+      "webhookId": "bb4f4543-fff7-4114-bdd7-6460adb992e6"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyze this article and create a summary that:\n\n1. Captures the 3 most important insights\n2. Includes any actionable advice or tips\n3. Maintains the original tone and perspective\n4. Highlights implications for the target audience\n5. Stays under 200 words for social media adaptation\n\nArticle: {{ $json.body.text || $json.text || $json.body.url || $json.url }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are a social media strategist with expertise in content adaptation. Analyze the article URL/content provided and return a concise, useful summary for LinkedIn post creation."
+            }
+          ]
+        }
+      },
+      "id": "256b5232-e310-48f7-8142-95a6abf53b8e",
+      "name": "Generate Summary",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.4,
+      "position": [
+        380,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-1.5-flash",
+        "options": {
+          "temperature": 0.3
+        }
+      },
+      "id": "e281496f-755e-444c-abcd-901384873776",
+      "name": "Gemini - Article Summarizer",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        380,
+        520
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YOUR_GEMINI_CREDENTIAL_ID",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Transform this learning summary into an engaging LinkedIn post: {{ $json.text }}\n\nCreate a post that:\n- Starts with a hook about today's learning achievement\n- Shares 2-3 specific insights or skills gained\n- Includes a reflection on how this knowledge applies to real-world scenarios\n- Uses relevant hashtags: #AIBootcamp #LearningJourney #GenerativeAI #TechSkills #100DaysOfCode\n- Ends with a question to engage the community\n- Length: 200-300 words\n- Professional yet authentic tone\n- Include relevant emojis for visual appeal\n\nDirectly return only the final LinkedIn post content. Do not add any intro, labels, or markdown fences.",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are an expert LinkedIn post creator. Turn summaries into polished, engaging LinkedIn posts that are ready to publish."
+            }
+          ]
+        }
+      },
+      "id": "a6f33a7b-b76f-4405-add4-ec5b1689eed1",
+      "name": "Generate LinkedIn Post Content",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.4,
+      "position": [
+        660,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-1.5-flash",
+        "options": {
+          "temperature": 0.7
+        }
+      },
+      "id": "34a04826-544d-46d8-b63f-d3eb58aed76b",
+      "name": "Gemini - Post Creator",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        660,
+        520
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YOUR_GEMINI_CREDENTIAL_ID",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "text": "={{ $json.text }}"
+      },
+      "id": "b0b674fe-2d1c-4e0d-a009-89f019ee7351",
+      "name": "Post to LinkedIn",
+      "type": "n8n-nodes-base.linkedIn",
+      "typeVersion": 1,
+      "position": [
+        940,
+        300
+      ],
+      "credentials": {
+        "linkedInOAuth2Api": {
+          "id": "YOUR_LINKEDIN_CREDENTIAL_ID",
+          "name": "LinkedIn account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { urn: $json.id || $json.urn || $json.postId || $json.shareUrn || 'LinkedIn post published successfully', message: 'Successfully posted!' } }}",
+        "options": {}
+      },
+      "id": "25802810-25f9-4213-a04e-422a73f80409",
+      "name": "Send Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1180,
+        300
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Article URL Receiver": {
+      "main": [
+        [
+          {
+            "node": "Generate Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini - Article Summarizer": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generate Summary",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Summary": {
+      "main": [
+        [
+          {
+            "node": "Generate LinkedIn Post Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini - Post Creator": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generate LinkedIn Post Content",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate LinkedIn Post Content": {
+      "main": [
+        [
+          {
+            "node": "Post to LinkedIn",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post to LinkedIn": {
+      "main": [
+        [
+          {
+            "node": "Send Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "f85654dd-b120-49b0-882c-8718c96b4508",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "b4fc168f-3735-4296-8ca6-d9053222b9f4",
+  "tags": []
+}

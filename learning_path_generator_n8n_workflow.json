@@ -1,0 +1,195 @@
+{
+  "name": "Learning Path Generator",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "090d974b-3c19-4b44-8893-df3ec546f90c",
+      "name": "Chat Trigger",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        120,
+        320
+      ],
+      "webhookId": "cc1eeff7-2ecc-41c4-a299-f04e04b8fed6"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.chatInput }}",
+        "options": {
+          "systemMessage": "You are a day-wise learning path generator. When given a learning goal, create a curriculum with Google Docs and Calendar events.\n\nSTEP 1: PLAN THE CURRICULUM\nPlan the topics based on the number of days requested. Structure from beginner to advanced. If the user does not specify the number of days, create a practical 7-day plan. For each day include topic, objectives, tasks, practice activity, and resource links.\n\nSTEP 2: DETERMINE START DATE\nIf user says \"starting tomorrow\" \u2192 use tomorrow's date.\nIf user says \"starting next Monday\" \u2192 calculate next Monday.\nIf user says \"starting from [date]\" \u2192 use that date.\nIf NO date mentioned \u2192 use TODAY's date.\nToday is {{$now.format('YYYY-MM-DD')}}.\n\nSTEP 3: FIND RESOURCES\nUse SerpAPI to search for useful learning resources for the topic. Include official documentation, beginner tutorials, and practice resources wherever relevant.\n\nSTEP 4: CREATE GOOGLE DOC\nUse Google Docs to create a document titled with the learning goal. Save the complete day-wise curriculum in a clear format.\n\nSTEP 5: CREATE GOOGLE CALENDAR EVENTS\nCreate one Google Calendar event for each day of the plan. Each event should include the day topic, tasks, and resource links. Schedule each event for a reasonable learning slot.\n\nSTEP 6: FINAL RESPONSE\nRespond with a clear confirmation message and include the Google Doc link. Mention that calendar events have been created."
+        }
+      },
+      "id": "a049c8c2-afc8-4233-9e0a-ca59238f8cc0",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        420,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-1.5-flash",
+        "options": {
+          "temperature": 0.5
+        }
+      },
+      "id": "dda74594-a696-4daf-969a-fa275432f955",
+      "name": "Google Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        280,
+        560
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YOUR_GEMINI_CREDENTIAL_ID",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "toolDescription": "Search the web for learning resources, tutorials, official documentation, courses, and practice exercises related to the user's learning goal.",
+        "q": "={{ $fromAI('search_query', 'Search query for learning resources, documentation, tutorials, and practice exercises') }}",
+        "additionalFields": {}
+      },
+      "id": "c3052d95-9392-445f-b4f7-69e21b915401",
+      "name": "SerpAPI Tool",
+      "type": "@n8n/n8n-nodes-langchain.toolSerpApi",
+      "typeVersion": 1,
+      "position": [
+        520,
+        560
+      ],
+      "credentials": {
+        "serpApi": {
+          "id": "YOUR_SERPAPI_CREDENTIAL_ID",
+          "name": "SerpAPI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "title": "={{ $fromAI('document_title', 'A clear Google Doc title for the learning path') }}"
+      },
+      "id": "c15c9240-42c9-48fc-8435-ad43ad387fb0",
+      "name": "Google Docs Tool",
+      "type": "n8n-nodes-base.googleDocsTool",
+      "typeVersion": 1,
+      "position": [
+        750,
+        560
+      ],
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "YOUR_GOOGLE_DOCS_CREDENTIAL_ID",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "primary",
+          "mode": "list",
+          "cachedResultName": "Primary"
+        },
+        "start": "={{ $fromAI('event_start', 'Start date and time for the calendar event in ISO format') }}",
+        "end": "={{ $fromAI('event_end', 'End date and time for the calendar event in ISO format') }}",
+        "additionalFields": {
+          "summary": "={{ $fromAI('event_title', 'Calendar event title for the learning plan day') }}",
+          "description": "={{ $fromAI('event_description', 'Calendar event description including day topic, tasks, and resource links') }}"
+        }
+      },
+      "id": "94e80f4f-8a5f-4f33-a1d1-b597bf00fc60",
+      "name": "Google Calendar Tool",
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.1,
+      "position": [
+        980,
+        560
+      ],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "YOUR_GOOGLE_CALENDAR_CREDENTIAL_ID",
+          "name": "Google Calendar account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Chat Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SerpAPI Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Docs Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Calendar Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "bb4fc028-7262-4195-94a1-0ceecbc75d9a",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "61f52f82-497d-46b3-a195-ccde6e6f45b8",
+  "tags": []
+}

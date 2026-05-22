@@ -1,0 +1,193 @@
+{
+  "name": "AI Podcast Generator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ai-podcast-generator",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "7c7db8cc-4936-408b-8f4e-dbb25a524d50",
+      "name": "Podcast Request Receiver",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        120,
+        300
+      ],
+      "webhookId": "486c5c1a-4467-446e-bd52-9b0d35936146"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a professional podcast script writer. Write a conversational and engaging podcast script on the topic: {{ $json.body.text || $json.body.chatInput || $json.chatInput || $json.text }}. Keep it around 2 minutes when spoken. Use a friendly and informative tone, as if talking directly to listeners. Avoid any headings, labels, or formatting. Output plain text only.",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "Generate a natural, engaging, spoken-style podcast script. Return only the script text."
+            }
+          ]
+        }
+      },
+      "id": "6e0f76c6-7c4a-4311-9d64-4f1b39a5b99f",
+      "name": "Podcast Script Generator",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.4,
+      "position": [
+        380,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-1.5-flash",
+        "options": {
+          "temperature": 0.7
+        }
+      },
+      "id": "37c0737e-28aa-4aea-9faf-9a05d8b2d70c",
+      "name": "Google Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        380,
+        520
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YOUR_GEMINI_CREDENTIAL_ID",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.murf.ai/v1/speech/generate",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "api-key",
+              "value": "YOUR_MURF_API_KEY"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParametersJson": "={{ JSON.stringify({ text: $json.text, voiceId: 'en-US-natalie', format: 'MP3' }) }}",
+        "options": {}
+      },
+      "id": "7d69f24d-cebb-4b82-bc4d-e7f861c04ea0",
+      "name": "Generate Voice Audio with Murf",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.audioFile || $json.audio_file || $json.audioUrl || $json.audio_url || $json.data?.audioFile || $json.data?.audioUrl }}",
+        "responseFormat": "file",
+        "options": {}
+      },
+      "id": "ca22fa5d-c49d-4d0d-b17e-0f61d053ce8b",
+      "name": "Audio File Downloader",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        920,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { audioFile: $('Generate Voice Audio with Murf').item.json.audioFile || $('Generate Voice Audio with Murf').item.json.audio_file || $('Generate Voice Audio with Murf').item.json.audioUrl || $('Generate Voice Audio with Murf').item.json.audio_url || $('Generate Voice Audio with Murf').item.json.data?.audioFile || $('Generate Voice Audio with Murf').item.json.data?.audioUrl, message: 'Podcast is ready! Click play to listen' } }}",
+        "options": {}
+      },
+      "id": "b52892fb-537d-4881-9b90-b55c4e3f4201",
+      "name": "Audio Response Sender",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1180,
+        300
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Podcast Request Receiver": {
+      "main": [
+        [
+          {
+            "node": "Podcast Script Generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Podcast Script Generator",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Podcast Script Generator": {
+      "main": [
+        [
+          {
+            "node": "Generate Voice Audio with Murf",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Voice Audio with Murf": {
+      "main": [
+        [
+          {
+            "node": "Audio File Downloader",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Audio File Downloader": {
+      "main": [
+        [
+          {
+            "node": "Audio Response Sender",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "d220b6c8-1b55-4b7f-bac9-3efaf5a2b2be",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "9001fe59-6652-4870-a5b2-7a1c1934314f",
+  "tags": []
+}
