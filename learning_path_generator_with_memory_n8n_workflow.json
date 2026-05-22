@@ -1,0 +1,252 @@
+{
+  "name": "Learning Path Generator with Memory",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "f456eb0e-d6d9-4db3-8203-f52a8d32b152",
+      "name": "Chat Trigger",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        120,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.chatInput }}",
+        "options": {
+          "systemMessage": "You are a day-wise learning path generator. When given a learning goal, create a curriculum with Google Docs and Calendar events.\n\nSTEP 1: PLAN THE CURRICULUM\nPlan the topics based on the number of days requested. Structure from beginner to advanced. If the user does not specify the number of days, create a practical 7-day plan. For each day include:\n- Day number\n- Topic/module\n- Learning objectives\n- Concepts to study\n- Hands-on practice task\n- Recommended resources\n- Expected outcome\n\nSTEP 2: DETERMINE START DATE\nIf user says \"starting tomorrow\" \u2192 use tomorrow's date.\nIf user says \"starting next Monday\" \u2192 calculate next Monday.\nIf user says \"starting from [date]\" \u2192 use that date.\nIf NO date mentioned \u2192 use TODAY's date.\nToday is {{$now.format('YYYY-MM-DD')}}.\n\nSTEP 3: USE MEMORY\nUse the conversation memory to remember the user's learning goal, preferred duration, start date, skill level, and any follow-up refinements during the workflow.\n\nSTEP 4: FIND RESOURCES\nUse SerpAPI to search and retrieve helpful resource links. Prefer official documentation, beginner-friendly tutorials, courses, and practice resources.\n\nSTEP 5: CREATE GOOGLE DOC\nCreate a Google Doc for the learning curriculum. Add the complete day-wise plan to the document in a clean, readable format. Include the learning goal, duration, start date, resources, and daily tasks.\n\nSTEP 6: CREATE GOOGLE CALENDAR EVENTS\nCreate one Google Calendar event for each day of the learning plan. Each event should include the day topic, learning objectives, tasks, and resource links.\n\nSTEP 7: RESPOND TO USER\nReturn a concise confirmation message that includes:\n- Confirmation that the curriculum was created\n- Confirmation that calendar events were scheduled\n- The Google Doc link if available\n"
+        }
+      },
+      "id": "4a6b4b67-3dd3-429f-b262-9493afd69083",
+      "name": "AI Learning Path Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-1.5-flash",
+        "options": {
+          "temperature": 0.5
+        }
+      },
+      "id": "0ccfdc9b-b846-4ec7-afb6-385a48f03189",
+      "name": "Google Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        220,
+        560
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YOUR_GEMINI_CREDENTIAL_ID",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "fromInput",
+        "sessionKey": "={{ $json.sessionId || $json.chatId || 'learning-path-session' }}",
+        "contextWindowLength": 10
+      },
+      "id": "d3b84aa1-b69d-4a58-a3b7-2f2638af5bbe",
+      "name": "Simple Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        420,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "Search the web for learning resources, tutorials, official documentation, courses, examples, and practice exercises related to the user's learning goal.",
+        "q": "={{ $fromAI('search_query', 'Search query for learning resources, official documentation, tutorials, and practice exercises') }}",
+        "additionalFields": {}
+      },
+      "id": "e78fc9db-990f-4b3a-9093-d7c730d30df5",
+      "name": "SerpAPI Resource Search Tool",
+      "type": "@n8n/n8n-nodes-langchain.toolSerpApi",
+      "typeVersion": 1,
+      "position": [
+        620,
+        560
+      ],
+      "credentials": {
+        "serpApi": {
+          "id": "YOUR_SERPAPI_CREDENTIAL_ID",
+          "name": "SerpAPI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "title": "={{ $fromAI('document_title', 'A clear Google Doc title for the personalized learning path') }}"
+      },
+      "id": "e25e9ae0-1c71-4179-9689-d33c06fc0cf5",
+      "name": "Google Docs Create Curriculum Tool",
+      "type": "n8n-nodes-base.googleDocsTool",
+      "typeVersion": 1,
+      "position": [
+        840,
+        560
+      ],
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "YOUR_GOOGLE_DOCS_CREDENTIAL_ID",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": "={{ $fromAI('document_id', 'Google Doc ID returned after creating the curriculum document') }}",
+        "text": "={{ $fromAI('curriculum_content', 'Complete day-wise learning curriculum content to add to the Google Doc') }}"
+      },
+      "id": "7d0dceed-d178-4bdd-a338-a44fb4c29068",
+      "name": "Google Docs Update Curriculum Tool",
+      "type": "n8n-nodes-base.googleDocsTool",
+      "typeVersion": 1,
+      "position": [
+        1060,
+        560
+      ],
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "YOUR_GOOGLE_DOCS_CREDENTIAL_ID",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "primary",
+          "mode": "list",
+          "cachedResultName": "Primary"
+        },
+        "start": "={{ $fromAI('event_start', 'Start date and time for the calendar event in ISO format') }}",
+        "end": "={{ $fromAI('event_end', 'End date and time for the calendar event in ISO format') }}",
+        "additionalFields": {
+          "summary": "={{ $fromAI('event_title', 'Calendar event title for one day of the learning plan') }}",
+          "description": "={{ $fromAI('event_description', 'Calendar event description including day topic, objectives, tasks, and resource links') }}"
+        }
+      },
+      "id": "1574f0bf-f44e-4228-b654-146ff5f4f73f",
+      "name": "Google Calendar Learning Events Tool",
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.1,
+      "position": [
+        1280,
+        560
+      ],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "YOUR_GOOGLE_CALENDAR_CREDENTIAL_ID",
+          "name": "Google Calendar account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Chat Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI Learning Path Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Learning Path Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Learning Path Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SerpAPI Resource Search Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Learning Path Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Docs Create Curriculum Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Learning Path Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Docs Update Curriculum Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Learning Path Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Calendar Learning Events Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Learning Path Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "0beab6b7-d736-4f57-bf45-f0879d91be31",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "66522483-9037-4f05-b877-1a4d5dfa6187",
+  "tags": []
+}

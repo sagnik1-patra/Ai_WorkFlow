@@ -1,0 +1,366 @@
+{
+  "name": "Building AI Shopping Assistant with Memory",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "11aba8b3-429d-441e-8899-85e94d8bd798",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        120,
+        300
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "625d38c8-0c5b-4e32-8086-fb56217c1446",
+              "leftValue": "={{ $json.message?.voice?.file_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "4711fd5b-98b4-4576-addb-90c24d61a510",
+      "name": "Check Text or Voice",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        350,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "operation": "get",
+        "fileId": "={{ $json.message.voice.file_id }}",
+        "additionalFields": {}
+      },
+      "id": "12dddda2-6373-438d-8600-d511170ce34b",
+      "name": "Telegram Get a File",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        600,
+        180
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "# Rename Telegram .oga voice notes to .ogg for Groq transcription compatibility\n# Keep the binary object under the same 'data' key.\nitem = items[0]\nbinary = item.get('binary', {})\nif 'data' in binary:\n    binary['data']['fileName'] = 'telegram_voice.ogg'\n    binary['data']['mimeType'] = 'audio/ogg'\nitem['binary'] = binary\nreturn [item]"
+      },
+      "id": "6b0122c2-14eb-4c15-b46d-68b3cda42792",
+      "name": "Prepare Audio File",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        840,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/audio/transcriptions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_GROQ_API_KEY"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "data"
+            },
+            {
+              "name": "model",
+              "value": "whisper-large-v3"
+            },
+            {
+              "name": "response_format",
+              "value": "json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "621771ed-d952-4d67-b371-66e4c5bfd536",
+      "name": "Groq Speech-to-Text",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1080,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.text || $('Telegram Trigger').item.json.message?.text || $('Telegram Trigger').item.json.message?.caption || '' }}",
+        "options": {
+          "systemMessage": "You are Maya, a shopping and styling assistant on Telegram.\n\n## Your Job\n1. Product Search:\nIf the user asks for a product, such as \"shoes under 5000\", \"best laptop bag\", \"kurta for wedding\", \"saree for office\", or anything with buying intent, use the ScraperAPI Amazon India Tool to search Amazon.in and return the top 5 useful results.\n\n2. Styling Advice:\nIf the user asks \"how to style blue jeans\", \"outfit for wedding\", \"what should I wear for office\", or asks for fashion suggestions without direct product buying intent, provide personalized styling advice. Ask 1-2 clarifying questions when needed.\n\n## Use Conversation Memory\nUse memory to remember:\n- User preferences\n- Budget\n- Size/style/color preferences\n- Occasion\n- Previous product or styling context\n\n## When to Use Scraper API Tool\nUse ScraperAPI only for product searches and buying-intent requests.\nDo not use ScraperAPI for general styling advice unless the user asks for product recommendations.\n\n## Product Result Format\nWhen returning Amazon India results, show the top 5 results if available:\n1. Product name\n2. Price if available\n3. Rating/review info if available\n4. Short reason why it matches\n5. Link if available\n\n## Styling Advice Format\nFor styling advice, be warm, conversational, and practical.\nInclude:\n- Outfit combinations\n- Color suggestions\n- Footwear/accessory ideas\n- Occasion-specific tips\n- Clarifying questions if required\n\nKeep responses Telegram-friendly and easy to read.\n"
+        }
+      },
+      "id": "b5b7bb1f-77e7-4537-ac57-bc6238091d26",
+      "name": "AI Shopping Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        1320,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-1.5-flash",
+        "options": {
+          "temperature": 0.5
+        }
+      },
+      "id": "b5095f2e-0141-4504-88ac-a78e87bee9ae",
+      "name": "Google Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        560
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YOUR_GEMINI_CREDENTIAL_ID",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "fromInput",
+        "sessionKey": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "contextWindowLength": 10
+      },
+      "id": "013f6cfd-5c64-4aa9-b3da-30da61f9a2d9",
+      "name": "Simple Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        1320,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "Search Amazon India product listings via ScraperAPI. Use this only when the user has buying intent. Return top matching product listings with names, prices, ratings, and links when available.",
+        "method": "GET",
+        "url": "https://api.scraperapi.com/",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "api_key",
+              "value": "YOUR_SCRAPERAPI_KEY"
+            },
+            {
+              "name": "url",
+              "value": "={{ 'https://www.amazon.in/s?k=' + encodeURIComponent($fromAI('amazon_search_query', 'Amazon India product search query, concise keywords only')) }}"
+            },
+            {
+              "name": "render",
+              "value": "true"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "5d317f9d-10c7-437d-b3e2-6d5de8f4e637",
+      "name": "ScraperAPI Amazon India Tool",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        1520,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.output || $json.text || $json.response }}",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "3bebdcc7-8bac-44cc-a2b3-01049ed535f3",
+      "name": "Telegram Send a Text Message",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1660,
+        300
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Check Text or Voice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Text or Voice": {
+      "main": [
+        [
+          {
+            "node": "Telegram Get a File",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Shopping Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Get a File": {
+      "main": [
+        [
+          {
+            "node": "Prepare Audio File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Audio File": {
+      "main": [
+        [
+          {
+            "node": "Groq Speech-to-Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Speech-to-Text": {
+      "main": [
+        [
+          {
+            "node": "AI Shopping Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Shopping Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Shopping Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ScraperAPI Amazon India Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Shopping Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Shopping Agent": {
+      "main": [
+        [
+          {
+            "node": "Telegram Send a Text Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "af665c1c-0d01-4b4f-a9e3-42a79afef659",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "30a7f98e-4dde-462c-8e01-d2d866add9b0",
+  "tags": []
+}
