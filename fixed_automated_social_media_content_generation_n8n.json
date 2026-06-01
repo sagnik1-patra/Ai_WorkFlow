@@ -1,0 +1,253 @@
+{
+  "name": "AI Workflow - Automated Social Media Content Generation with n8n",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet1",
+          "mode": "name"
+        },
+        "event": "rowAdded",
+        "options": {}
+      },
+      "id": "google-sheets-trigger-new-news-link",
+      "name": "Google Sheets Trigger - New News Link",
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        -760,
+        120
+      ],
+      "credentials": {
+        "googleSheetsTriggerOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "models/gemini-1.5-flash",
+        "options": {
+          "temperature": 0.7,
+          "maxOutputTokens": 1024
+        }
+      },
+      "id": "google-gemini-chat-model",
+      "name": "Google Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        420
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YOUR_GOOGLE_GEMINI_CREDENTIAL_ID",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "Summarize this article: {{ $json.newslink }}"
+      },
+      "id": "summarize-article",
+      "name": "Summarize Article",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        -420,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "Assume the role of an industry expert and draft a LinkedIn post discussing key points from a news article relevant to artificial intelligence. The post should provide insightful analysis, connect with current industry trends, and encourage professional engagement or discussions. Highlight any notable implications for the industry. LinkedIn supports detailed posts, so ensure it is informative and structured. Add a professional call to action. Directly start with the post content, do not add any primer like \"here is your content for LinkedIn post\". Here's a summary of the article: {{ $json.text }}"
+      },
+      "id": "generate-linkedin-post",
+      "name": "Generate LinkedIn Post Content",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        -80,
+        20
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "Draft an X post as an AI industry expert analyzing a key news article. The post should:Deliver sharp insights on the article's main points.Connect to current AI trends.Spark discussion with a thought-provoking question.Keep it punchy and engaging.End with a clear CTA.Length should be within 30 words. Focus on what matters most to the AI community. Make every word count.Article summary: {{ $json.text }}"
+      },
+      "id": "generate-x-twitter-post",
+      "name": "Generate X Twitter Post Content",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        -80,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "post",
+        "operation": "create",
+        "text": "={{ $json.text }}",
+        "additionalFields": {}
+      },
+      "id": "post-to-linkedin",
+      "name": "Post to Linkedin",
+      "type": "n8n-nodes-base.linkedIn",
+      "typeVersion": 1,
+      "position": [
+        280,
+        20
+      ],
+      "credentials": {
+        "linkedInOAuth2Api": {
+          "id": "YOUR_LINKEDIN_CREDENTIAL_ID",
+          "name": "LinkedIn account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "tweet",
+        "operation": "create",
+        "text": "={{ $json.text }}"
+      },
+      "id": "post-to-x-twitter",
+      "name": "Post to X Twitter",
+      "type": "n8n-nodes-base.twitter",
+      "typeVersion": 2,
+      "position": [
+        280,
+        220
+      ],
+      "credentials": {
+        "twitterOAuth2Api": {
+          "id": "YOUR_TWITTER_CREDENTIAL_ID",
+          "name": "X Twitter account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Sheets Trigger - New News Link": {
+      "main": [
+        [
+          {
+            "node": "Summarize Article",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Summarize Article",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Generate LinkedIn Post Content",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Generate X Twitter Post Content",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ],
+      "ai_languagemodel": [
+        [
+          {
+            "node": "Summarize Article",
+            "type": "ai_languagemodel",
+            "index": 0
+          },
+          {
+            "node": "Generate LinkedIn Post Content",
+            "type": "ai_languagemodel",
+            "index": 0
+          },
+          {
+            "node": "Generate X Twitter Post Content",
+            "type": "ai_languagemodel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarize Article": {
+      "main": [
+        [
+          {
+            "node": "Generate LinkedIn Post Content",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Generate X Twitter Post Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate LinkedIn Post Content": {
+      "main": [
+        [
+          {
+            "node": "Post to Linkedin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate X Twitter Post Content": {
+      "main": [
+        [
+          {
+            "node": "Post to X Twitter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "11cbedf5-0597-46ea-ae1d-f101974fe8db",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "automated-social-media-content-generation"
+  },
+  "id": "automated-social-media-content-generation-n8n",
+  "tags": []
+}

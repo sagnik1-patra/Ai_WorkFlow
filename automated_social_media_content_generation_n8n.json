@@ -1,0 +1,318 @@
+{
+  "name": "AI Workflow - Automated Social Media Content Generation",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "PASTE_GOOGLE_SHEET_ID_HERE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet1",
+          "mode": "name"
+        },
+        "event": "rowAdded",
+        "options": {}
+      },
+      "id": "6b8d61d5-dc01-4b2b-924c-5f509d18d41a",
+      "name": "Google Sheets Trigger - New News Link",
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        -780,
+        120
+      ],
+      "credentials": {
+        "googleSheetsTriggerOAuth2Api": {
+          "id": "REPLACE_WITH_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const newslink = $json.newslink || $json.NewsLink || $json.link || $json.url || $json.URL;\nif (!newslink) {\n  throw new Error('Missing news article link. Add a Google Sheet column named newslink.');\n}\nreturn [{ json: { newslink } }];"
+      },
+      "id": "0f46601f-7a5f-40b7-ad7d-c7db9e8f6a11",
+      "name": "Prepare News Link",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -540,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={{$credentials.googleGeminiApi.apiKey}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": \"Summarize this article: {{$json.newslink}}\"\n        }\n      ]\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "dd023858-8ccd-4a9b-8f5f-a8533b398004",
+      "name": "Google Gemini - Summarize Article",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -300,
+        120
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_GEMINI_HEADER_AUTH_ID",
+          "name": "Google Gemini API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = $json.candidates?.[0]?.content?.parts?.[0]?.text || '';\nreturn [{ json: { text } }];"
+      },
+      "id": "4dbbd0af-b50b-4ba5-8e12-97fb0c45ac44",
+      "name": "Extract Article Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -60,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={{$credentials.googleGeminiApi.apiKey}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": \"Assume the role of an industry expert and draft a LinkedIn post discussing key points from a news article relevant to artificial intelligence. The post should provide insightful analysis, connect with current industry trends, and encourage professional engagement or discussions. Highlight any notable implications for the industry. LinkedIn supports detailed posts, so ensure it is informative and structured. Add a professional call to action. Directly start with the post content, do not add any primer like here is your content for LinkedIn post. Here's a summary of the article: {{$json.text}}\"\n        }\n      ]\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "cd4ec568-65dc-4086-9d2f-2bc4268208e9",
+      "name": "Google Gemini - Generate LinkedIn Post",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        180,
+        20
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_GEMINI_HEADER_AUTH_ID",
+          "name": "Google Gemini API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={{$credentials.googleGeminiApi.apiKey}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": \"Draft an X post as an AI industry expert analyzing a key news article. The post should: Deliver sharp insights on the article's main points. Connect to current AI trends. Spark discussion with a thought-provoking question. Keep it punchy and engaging. End with a clear CTA. Length should be within 30 words. Focus on what matters most to the AI community. Make every word count. Article summary: {{$json.text}}\"\n        }\n      ]\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "8e569bb7-9997-4f0a-ae06-fbe6a8b73cf1",
+      "name": "Google Gemini - Generate X Twitter Post",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        180,
+        220
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_GEMINI_HEADER_AUTH_ID",
+          "name": "Google Gemini API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const linkedinText = $json.candidates?.[0]?.content?.parts?.[0]?.text || '';\nreturn [{ json: { linkedinText } }];"
+      },
+      "id": "45f1f3bb-5812-4512-a046-d9f0603ad43d",
+      "name": "Extract LinkedIn Post",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        420,
+        20
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const xText = $json.candidates?.[0]?.content?.parts?.[0]?.text || '';\nreturn [{ json: { xText } }];"
+      },
+      "id": "11c0e1c4-5940-4325-b442-cddc9e5ead21",
+      "name": "Extract X Twitter Post",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        420,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "text": "={{$json.linkedinText}}",
+        "additionalFields": {}
+      },
+      "id": "de71c1e0-ea77-4abe-815f-02a063b24cd2",
+      "name": "Post to LinkedIn",
+      "type": "n8n-nodes-base.linkedIn",
+      "typeVersion": 1,
+      "position": [
+        660,
+        20
+      ],
+      "credentials": {
+        "linkedInOAuth2Api": {
+          "id": "REPLACE_WITH_LINKEDIN_CREDENTIAL_ID",
+          "name": "LinkedIn account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "text": "={{$json.xText}}",
+        "additionalFields": {}
+      },
+      "id": "d4506583-7354-4c7d-bd6c-ae09f2579440",
+      "name": "Post to X Twitter",
+      "type": "n8n-nodes-base.twitter",
+      "typeVersion": 2,
+      "position": [
+        660,
+        220
+      ],
+      "credentials": {
+        "twitterOAuth2Api": {
+          "id": "REPLACE_WITH_X_TWITTER_CREDENTIAL_ID",
+          "name": "X Twitter account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Sheets Trigger - New News Link": {
+      "main": [
+        [
+          {
+            "node": "Prepare News Link",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare News Link": {
+      "main": [
+        [
+          {
+            "node": "Google Gemini - Summarize Article",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini - Summarize Article": {
+      "main": [
+        [
+          {
+            "node": "Extract Article Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Article Summary": {
+      "main": [
+        [
+          {
+            "node": "Google Gemini - Generate LinkedIn Post",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Google Gemini - Generate X Twitter Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini - Generate LinkedIn Post": {
+      "main": [
+        [
+          {
+            "node": "Extract LinkedIn Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini - Generate X Twitter Post": {
+      "main": [
+        [
+          {
+            "node": "Extract X Twitter Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract LinkedIn Post": {
+      "main": [
+        [
+          {
+            "node": "Post to LinkedIn",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract X Twitter Post": {
+      "main": [
+        [
+          {
+            "node": "Post to X Twitter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "e7895797-2ac4-4cb9-9dd7-b64a7e5baf02",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "ai-social-media-content-generation",
+  "tags": []
+}
